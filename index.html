@@ -25,7 +25,7 @@
   /* Accent */
   --acc: #D4A574; --acc2:#a87840;
   /* Text */
-  --t1:#eef3fa; --t2:#8fa3be; --t3:#4a6180; --t4:#2d4a62;
+  --t1:#eef3fa; --t2:#8fa3be; --t3:#6a88a8; --t4:#4e6a88;
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -104,7 +104,7 @@ select.sf {
   width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border2);
   color:var(--t1); font-family:'Montserrat',sans-serif; font-size:11.5px;
   border-radius:7px; padding:7px 10px; cursor:pointer; transition:.18s; appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a6180'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a88a8'/%3E%3C/svg%3E");
   background-repeat:no-repeat; background-position:right 10px center; padding-right:26px;
 }
 select.sf:focus { outline:none; border-color:var(--acc2); }
@@ -192,7 +192,7 @@ canvas { max-width:100%; }
   transition:color .15s, background .15s;
 }
 .ht th:hover { background:rgba(255,255,255,.08); color:var(--t2); }
-.ht th:first-child { text-align:left; }
+.ht th:first-child { text-align:center; }
 /* Sortable header tooltip */
 .ht-tip-wrap { position:relative; display:inline-block; }
 .ht-tip {
@@ -210,7 +210,7 @@ canvas { max-width:100%; }
   font-size:11px; font-weight:500; transition:.15s;
 }
 .ht td:first-child {
-  text-align:left; font-family:'Oswald',sans-serif; font-size:12.5px;
+  text-align:center; font-family:'Oswald',sans-serif; font-size:12.5px;
   font-weight:500; letter-spacing:.04em; color:var(--t1); white-space:nowrap;
   text-transform:uppercase;
   background:rgba(255,255,255,.03)!important; border:1px solid var(--border);
@@ -238,7 +238,7 @@ canvas { max-width:100%; }
   font-family:'Montserrat',sans-serif; font-size:12.5px; border-radius:7px;
   padding:8px 12px; width:100%; transition:.18s; appearance:none;
 }
-.inp-g select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a6180'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:26px; }
+.inp-g select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a88a8'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:26px; }
 .inp-g select:focus, .inp-g input:focus { outline:none; border-color:var(--acc2); background:rgba(255,255,255,.06); }
 .calc-btn {
   background:rgba(212,165,116,.14); border:1px solid rgba(212,165,116,.35);
@@ -537,9 +537,11 @@ details.dict-section[open] > summary.dict-section-title::after {
           <div class="card-s">Top 20 by |Fraud Delta| within current filter &middot; positive = outperforming run diff &middot; negative = underperforming</div>
         </div>
         <div class="legend">
-          <div class="li"><div class="ld" style="background:#F08530"></div>Regression Candidates</div>
-          <div class="li"><div class="ld" style="background:#2E5090"></div>True Contenders</div>
-          <div class="li"><div class="ld" style="background:#5B9AA9"></div>Late-Season Risers</div>
+          <div class="li"><div class="ld" style="background:#2E5090"></div>Deep Under</div>
+          <div class="li"><div class="ld" style="background:#778DB7"></div>Mild Under</div>
+          <div class="li"><div class="ld" style="background:#5B9AA9"></div>Neutral</div>
+          <div class="li"><div class="ld" style="background:#F6B880"></div>Mild Over</div>
+          <div class="li"><div class="ld" style="background:#F2994A"></div>Deep Over</div>
         </div>
       </div>
       <div class="card-b"><div class="ch-bar"><canvas id="barCanvas"></canvas></div></div>
@@ -892,6 +894,28 @@ var UNDR_A  = function(a) { return 'rgba(91,154,169,' + a + ')'; };
 var CAT = ['#5D5C9C','#7E7EB8','#5B9AA9','#D4A574','#E88D67'];
 var SEQ = ['#87CEEB','#5AA9D6','#3682BA','#1B5A8F','#0D3B66'];
 
+// ── Diverging Fraud Delta ramp (5 stops: deep blue → mid blue → teal neutral → light orange → deep orange) ──
+// Thresholds: -0.10 / -0.04 / +0.04 / +0.10
+var FD_COLORS = [
+  { maxFd: -0.10, fill: 'rgba(46,80,144,0.88)',   border: '#2E5090', label: 'Deep Under',  dot: '#2E5090' },
+  { maxFd: -0.04, fill: 'rgba(119,141,183,0.74)', border: '#778DB7', label: 'Mild Under',  dot: '#778DB7' },
+  { maxFd:  0.04, fill: 'rgba(91,154,169,0.65)',  border: '#5B9AA9', label: 'Neutral',     dot: '#5B9AA9' },
+  { maxFd:  0.10, fill: 'rgba(246,184,128,0.74)', border: '#F6B880', label: 'Mild Over',   dot: '#F6B880' },
+  { maxFd: Infinity, fill: 'rgba(242,153,74,0.88)', border: '#F2994A', label: 'Deep Over', dot: '#F2994A' }
+];
+function fdDivFill(fd) {
+  for (var i=0;i<FD_COLORS.length;i++) if (fd < FD_COLORS[i].maxFd) return FD_COLORS[i].fill;
+  return FD_COLORS[FD_COLORS.length-1].fill;
+}
+function fdDivBorder(fd) {
+  for (var i=0;i<FD_COLORS.length;i++) if (fd < FD_COLORS[i].maxFd) return FD_COLORS[i].border;
+  return FD_COLORS[FD_COLORS.length-1].border;
+}
+function fdDivLabel(fd) {
+  for (var i=0;i<FD_COLORS.length;i++) if (fd < FD_COLORS[i].maxFd) return FD_COLORS[i].label;
+  return FD_COLORS[FD_COLORS.length-1].label;
+}
+
 Chart.defaults.font.family = "'Montserrat', sans-serif";
 
 // ── State ──
@@ -926,7 +950,10 @@ function seqColor(n) {
   var b = Math.round(c0[2] + (c1[2]-c0[2])*f);
   return 'rgba(' + r + ',' + g + ',' + b + ',0.8)';
 }
-function seqText(n) { return n > 0.55 ? '#eef3fa' : (n > 0.3 ? '#2d6090' : '#0D3B66'); }
+// Crossover at n=0.5 (bg luminance 0.20 = WCAG pivot).
+// n≤0.5 → dark navy on light/mid blue: 9.3:1 → 3.9:1
+// n>0.5 → off-white on dark blue: 6.5:1 → 10.3:1
+function seqText(n) { return n > 0.5 ? '#eef3fa' : '#0a2236'; }
 
 function norm(v, mn, mx) { return (mx === mn) ? 0.5 : (v - mn) / (mx - mn); }
 
@@ -967,8 +994,8 @@ function buildBar(data) {
       datasets: [{
         label: 'Fraud Delta',
         data: sorted.map(function(d) { return d.fraud_delta; }),
-        backgroundColor: sorted.map(function(d) { return tierBgA(d.fraud_tier, 0.78); }),
-        borderColor:     sorted.map(function(d) { return tierBg(d.fraud_tier); }),
+        backgroundColor: sorted.map(function(d) { return fdDivFill(d.fraud_delta); }),
+        borderColor:     sorted.map(function(d) { return fdDivBorder(d.fraud_delta); }),
         borderWidth: 1, borderRadius: 4, borderSkipped: false
       }]
     },
@@ -989,7 +1016,7 @@ function buildBar(data) {
                 '  Fraud Delta: ' + s + d.fraud_delta.toFixed(3),
                 '  SOS: ' + d.sos.toFixed(3),
                 '  Rank: ' + (d.rank <= 304 ? '#' + d.rank : 'NR'),
-                '  Tier: ' + d.fraud_tier
+                '  Profile: ' + fdDivLabel(d.fraud_delta)
               ];
             }
           }
@@ -999,13 +1026,14 @@ function buildBar(data) {
         x: {
           grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.06)' },
           ticks: { color: '#8fa3be', font: { size: 11 } },
-          title: { display: true, text: 'Fraud Delta  (Actual Win% − Pythagorean Win%)', color: '#4a6180', font: { size: 11 } }
+          title: { display: true, text: 'Fraud Delta  (Actual Win% − Pythagorean Win%)', color: '#6a88a8', font: { size: 11 } }
         },
         y: {
           grid: { display: false }, border: { display: false },
           ticks: {
             color: '#c0d0e0',
-            font: { family: "'Oswald', sans-serif", size: 12, weight: '500' }
+            font: { family: "'Oswald', sans-serif", size: 12, weight: '500' },
+            align: 'center', crossAlign: 'center'
           }
         }
       }
@@ -1125,12 +1153,12 @@ function buildScatter(data) {
           min: 0,
           grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.06)' },
           ticks: { color: '#8fa3be', font: { size: 11 }, maxTicksLimit: 8 },
-          title: { display: true, text: 'Strength of Schedule (SOS)', color: '#4a6180', font: { size: 11 } }
+          title: { display: true, text: 'Strength of Schedule (SOS)', color: '#6a88a8', font: { size: 11 } }
         },
         y: {
           grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.06)' },
           ticks: { color: '#8fa3be', font: { size: 11 } },
-          title: { display: true, text: 'Fraud Delta', color: '#4a6180', font: { size: 11 } }
+          title: { display: true, text: 'Fraud Delta', color: '#6a88a8', font: { size: 11 } }
         }
       }
     }
@@ -1277,7 +1305,7 @@ function buildCoaching(data) {
     var ul = document.getElementById(id);
     ul.innerHTML = '';
     if (!teams.length) {
-      ul.innerHTML = '<li style="justify-content:center;color:#4a6180;padding:10px">No teams match filter</li>';
+      ul.innerHTML = '<li style="justify-content:center;color:#6a88a8;padding:10px">No teams match filter</li>';
       return;
     }
     teams.forEach(function(d) {
