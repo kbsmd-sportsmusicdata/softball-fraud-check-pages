@@ -558,6 +558,13 @@ details.dict-section[open] > summary.dict-section-title::after {
       </div>
       <div class="card-b">
         <div class="ch-sc"><canvas id="scatterCanvas"></canvas></div>
+        <div class="legend" style="margin-top:10px">
+          <div class="li"><div class="ld" style="background:#2E5090"></div>Deep Under</div>
+          <div class="li"><div class="ld" style="background:#778DB7"></div>Mild Under</div>
+          <div class="li"><div class="ld" style="background:#5B9AA9"></div>Neutral</div>
+          <div class="li"><div class="ld" style="background:#F6B880"></div>Mild Over</div>
+          <div class="li"><div class="ld" style="background:#F2994A"></div>Deep Over</div>
+        </div>
       </div>
     </div>
   </div>
@@ -918,6 +925,63 @@ function fdDivLabel(fd) {
 
 Chart.defaults.font.family = "'Montserrat', sans-serif";
 
+// ── ESPN school logo IDs (ncaa/500/{id}.png) ──
+var ESPN_IDS = {
+  'Tennessee':2633,'Texas':251,'UCLA':26,'Nebraska':158,'Alabama':333,
+  'Arkansas':8,'Florida':57,'Texas Tech':2641,'Oklahoma':201,'Virginia Tech':259,
+  'Florida St.':52,'Washington':264,'LSU':99,'Virginia':258,'Mississippi St.':344,
+  'Oregon':2483,'Arizona':12,'Georgia':61,'Oklahoma St.':197,'Stanford':24,
+  'UCF':2116,'Grand Canyon':2253,'Auburn':2,'Clemson':228,'Duke':150,
+  'Arizona St.':9,'Michigan':130,'Missouri':142,'Ole Miss':145,'South Carolina':2579,
+  'Kentucky':96,'Oregon St.':204,'Baylor':239,'Texas A&M':245,'Northwestern':77,
+  'Cal':25,'Notre Dame':87,'Penn State':213,'Ohio State':194,'Utah':254,
+  'Washington St.':265,'Iowa':2294,'Minnesota':135,'Michigan St.':127
+};
+var LOGO_IMGS = {};
+function preloadLogos(teams) {
+  teams.forEach(function(team) {
+    var id = ESPN_IDS[team];
+    if (!id || (LOGO_IMGS[team] && LOGO_IMGS[team]._loaded)) return;
+    var img = new Image();
+    img._loaded = false;
+    img.onload  = function() { img._loaded = true; if (scatterChart) scatterChart.update('none'); };
+    img.onerror = function() { img._loaded = false; };
+    img.src = 'https://a.espncdn.com/i/teamlogos/ncaa/500/' + id + '.png';
+    LOGO_IMGS[team] = img;
+  });
+}
+
+// ── Logo backdrop plugin (Top 25 scatter only) ──
+var logoPlugin = {
+  id: 'logos',
+  afterDatasetsDraw: function(chart) {
+    if (activeRank !== 't25') return;
+    var ctx = chart.ctx;
+    var meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data) return;
+    var pts = chart.data.datasets[0].data;
+    meta.data.forEach(function(point, i) {
+      var raw = pts[i];
+      var x = point.x, y = point.y, r = 13;
+      // Colored backdrop circle
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = fdDivFill(raw.y); ctx.fill();
+      ctx.strokeStyle = fdDivBorder(raw.y); ctx.lineWidth = 1.5; ctx.stroke();
+      // Logo clipped to circle
+      var img = LOGO_IMGS[raw.team];
+      if (img && img._loaded) {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x, y, r - 2, 0, Math.PI * 2); ctx.clip();
+        var sz = (r - 2) * 2;
+        ctx.drawImage(img, x - (r - 2), y - (r - 2), sz, sz);
+        ctx.restore();
+      }
+      ctx.restore();
+    });
+  }
+};
+
 // ── State ──
 var activeConf = 'all', activeRank = 'all', activeTab = 'fraud';
 var barChart = null, scatterChart = null;
@@ -1008,7 +1072,10 @@ function buildBar(data) {
           titleColor: '#eef3fa', bodyColor: '#8fa3be', padding: 12,
           titleFont: { family: "'Oswald', sans-serif", size: 14, weight: '600' },
           callbacks: {
-            title: function(items) { return items[0].label; },
+            title: function(items) {
+              var d = sorted[items[0].dataIndex];
+              return items[0].label + ' | ' + d.wins + '–' + d.losses;
+            },
             label: function(ctx) {
               var d = sorted[ctx.dataIndex];
               var s = d.fraud_delta >= 0 ? '+' : '';
@@ -1052,17 +1119,17 @@ var quadrantPlugin = {
     var xMid = xs.getPixelForValue(0.35);
     var left = xs.left, right = xs.right, top = ys.top, bottom = ys.bottom;
     ctx.save();
-    // Upper-left: Resume Inflation (subtle orange)
-    ctx.fillStyle = 'rgba(240,133,48,0.06)';
+    // Upper-left: Resume Inflation — orange (over-performing, soft schedule)
+    ctx.fillStyle = 'rgba(242,153,74,0.07)';
     ctx.fillRect(left, top, xMid - left, y0 - top);
-    // Upper-right: True Strength (subtle blue)
-    ctx.fillStyle = 'rgba(100,130,200,0.04)';
+    // Upper-right: True Strength — blue (over-performing, tough schedule)
+    ctx.fillStyle = 'rgba(46,80,144,0.05)';
     ctx.fillRect(xMid, top, right - xMid, y0 - top);
-    // Lower-left: Shallow Struggle (nearly neutral)
+    // Lower-left: Shallow Struggle — neutral
     ctx.fillStyle = 'rgba(255,255,255,0.01)';
     ctx.fillRect(left, y0, xMid - left, bottom - y0);
-    // Lower-right: Hidden Strength (teal)
-    ctx.fillStyle = 'rgba(91,154,169,0.07)';
+    // Lower-right: Hidden Strength — teal
+    ctx.fillStyle = 'rgba(91,154,169,0.08)';
     ctx.fillRect(xMid, y0, right - xMid, bottom - y0);
     ctx.restore();
   },
@@ -1086,20 +1153,20 @@ var quadrantPlugin = {
     // Quadrant labels
     ctx.font = "700 9px 'Montserrat', sans-serif";
     ctx.letterSpacing = '0.06em';
-    // Upper-left
-    ctx.fillStyle = 'rgba(240,133,48,0.40)';
+    // Upper-left (orange — over-performing on soft schedule)
+    ctx.fillStyle = 'rgba(242,153,74,0.60)';
     ctx.textAlign = 'left';
     ctx.fillText('Resume Inflation', left + 10, top + 16);
-    // Upper-right
-    ctx.fillStyle = 'rgba(100,130,200,0.38)';
+    // Upper-right (mid-blue — over-performing on tough schedule)
+    ctx.fillStyle = 'rgba(119,141,183,0.65)';
     ctx.textAlign = 'right';
     ctx.fillText('True Strength', right - 10, top + 16);
-    // Lower-left
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    // Lower-left (neutral)
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.textAlign = 'left';
     ctx.fillText('Shallow Struggle', left + 10, bottom - 9);
-    // Lower-right
-    ctx.fillStyle = 'rgba(91,154,169,0.50)';
+    // Lower-right (teal)
+    ctx.fillStyle = 'rgba(91,154,169,0.70)';
     ctx.textAlign = 'right';
     ctx.fillText('Hidden Strength', right - 10, bottom - 9);
     ctx.restore();
@@ -1108,23 +1175,31 @@ var quadrantPlugin = {
 
 // ── Scatter ──
 function buildScatter(data) {
-  var tiers = ['Overperforming','Stable','Underperforming'];
-  var datasets = tiers.map(function(tier) {
-    return {
-      label: tier,
-      data: data.filter(function(d) { return d.fraud_tier === tier && d.sos > 0; })
-                .map(function(d) { return { x: d.sos, y: d.fraud_delta, team: d.team, tsr: d.tsr, rank: d.rank }; }),
-      backgroundColor: tierBgA(tier, 0.72),
-      borderColor: tierBg(tier),
-      borderWidth: 1, pointRadius: 4.5, pointHoverRadius: 7
-    };
-  });
+  // Single dataset — per-point colors from the same 5-stop FD ramp as the bar chart
+  var pts = data.filter(function(d) { return d.sos > 0; })
+               .map(function(d) {
+                 return { x: d.sos, y: d.fraud_delta,
+                          team: d.team, tsr: d.tsr, rank: d.rank,
+                          wins: d.wins, losses: d.losses };
+               });
+  var isTop25 = (activeRank === 't25');
   if (scatterChart) { scatterChart.destroy(); scatterChart = null; }
   var ctx = document.getElementById('scatterCanvas').getContext('2d');
   scatterChart = new Chart(ctx, {
     type: 'scatter',
-    plugins: [quadrantPlugin],
-    data: { datasets: datasets },
+    plugins: [quadrantPlugin, logoPlugin],
+    data: {
+      datasets: [{
+        label: 'Teams',
+        data: pts,
+        backgroundColor: pts.map(function(d) { return fdDivFill(d.y); }),
+        borderColor:     pts.map(function(d) { return fdDivBorder(d.y); }),
+        borderWidth: 1,
+        pointRadius:     isTop25 ? 0 : 4.5,
+        pointHitRadius:  isTop25 ? 14 : 7,
+        pointHoverRadius: isTop25 ? 0 : 7
+      }]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1134,12 +1209,16 @@ function buildScatter(data) {
           titleColor: '#eef3fa', bodyColor: '#8fa3be', padding: 12,
           titleFont: { family: "'Oswald', sans-serif", size: 14, weight: '600' },
           callbacks: {
-            title: function(items) { return items[0].raw.team.toUpperCase(); },
+            title: function(items) {
+              var r = items[0].raw;
+              return r.team.toUpperCase() + ' | ' + r.wins + '–' + r.losses;
+            },
             label: function(item) {
               var r = item.raw;
               var s = r.y >= 0 ? '+' : '';
               return [
                 '  Fraud Delta: ' + s + r.y.toFixed(3),
+                '  Profile: ' + fdDivLabel(r.y),
                 '  SOS: ' + r.x.toFixed(3),
                 '  TSR: ' + r.tsr.toFixed(2),
                 '  Rank: ' + (r.rank <= 304 ? '#' + r.rank : 'NR')
@@ -1163,6 +1242,8 @@ function buildScatter(data) {
       }
     }
   });
+  // Pre-load logos for visible teams when Top 25 filter is active
+  if (isTop25) { preloadLogos(pts.map(function(d) { return d.team; })); }
 }
 
 // ── Heatmap sort state ──
@@ -1280,7 +1361,8 @@ function buildHeatmap(data) {
     }
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td>' + d.team.toUpperCase() + '</td>' +
+      '<td style="line-height:1.25">' + d.team.toUpperCase() +
+        '<br><span style="font-size:10px;font-weight:400;color:#6a88a8">' + d.wins + '–' + d.losses + '</span></td>' +
       '<td>' + tierHtml + '</td>' +
       '<td>' + rk + '</td>' +
       cell(seqColor(nSos), seqText(nSos), d.sos.toFixed(3),         pSos) +
@@ -1312,7 +1394,7 @@ function buildCoaching(data) {
       var li = document.createElement('li');
       var rk = d.rank <= 304 ? '#'+d.rank : 'NR';
       li.innerHTML =
-        '<span class="cc-name">' + d.team + '</span>' +
+        '<span class="cc-name">' + d.team + ' (' + d.wins + '–' + d.losses + ')</span>' +
         '<span><div class="cc-stat">' + statFn(d) + '</div>' +
         '<div class="cc-rank">' + rk + ' &middot; ' + (d.conference || '') + '</div></span>';
       ul.appendChild(li);
@@ -1334,7 +1416,7 @@ function populateCalcSelect(data) {
     var opt = document.createElement('option');
     opt.value = d.team;
     var rk = d.rank <= 304 ? ' (#' + d.rank + ')' : '';
-    opt.textContent = d.team + rk;
+    opt.textContent = d.team + ' (' + d.wins + '–' + d.losses + ')' + rk;
     sel.appendChild(opt);
   });
   if (prev && sorted.find(function(d) { return d.team === prev; })) {
