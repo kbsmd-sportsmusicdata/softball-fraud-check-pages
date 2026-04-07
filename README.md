@@ -32,9 +32,9 @@ The goal is to identify **structural strength vs short-term variance** early in 
 
 # Dashboard Preview
 
-![Softball Volatility Dashboard](Softball Volatility Tracker Preview.png)
+![Softball Volatility Dashboard](Softball_Volatility_Tracker_Preview.png)
 
-![Softball Volatility Dashboard](Softball Volatility Decision Board Screenshot.png)
+![Softball Volatility Dashboard](Softball_Volatility_Decision_Board_Screenshot.png)
 
 ---
 
@@ -227,10 +227,10 @@ Used to evaluate **high-leverage offensive volatility**.
 ```
 softball-volatility-check-pages
 │
-├── README.md # Project documentation
-├── Softball Volatility Decision Board Screenshot.png # Screenshot used in README
+├── README.md # Project documentation 
+├── Softball_Volatility_Tracker_Preview.png # Screenshot used in README
+├── Softball_Volatility_Decision_Board_Screenshot.png # Screenshot used in README
 ├── index.html # Interactive volatility dashboard
-├── Softball Volatility Tracker Preview.png # Screenshot used in README
 │
 └── data
   └── processed_metrics.csv
